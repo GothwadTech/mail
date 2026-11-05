@@ -2,7 +2,17 @@
 
 Last updated: 2026-10-24. Read this first if you are picking the work up.
 
-## What this branch (`arena/b8a0e310-mail`) changed
+## Latest: sending is provider-neutral
+
+`worker/src/send/` holds one adapter per outbound provider (`resend.ts`, `cloudflare.ts`) and
+`index.ts` chooses between them with `MAIL_SEND_PROVIDER` (`resend` | `cloudflare`; unset =
+auto-detect). The send route, the daily cap, the Sent copy and the error codes are unchanged.
+`/api/health` reports `send.provider`. Full guide: `docs/SENDING.md`.
+
+Resend stays the default because it is free; Cloudflare Email Sending is implemented but disabled
+(it needs the Workers Paid plan). Bounces/complaints are still not processed.
+
+## Previous change (already merged): startup waits for identity only
 
 The app used to block on one big `/api/session` call that also did database work (schema
 bootstrap, send count, unread counts). It now waits for **identity only**:
@@ -23,7 +33,7 @@ Full reasoning, contract and local measurements: `docs/STARTUP.md`.
 
 ```bash
 npm ci
-npm test        # 181 pass, 0 fail
+npm test        # 188 pass, 0 fail
 npm run lint    # web + worker typecheck
 npm run build   # 24 precache entries, 500.30 KiB
 node tools/check-file-sizes.mjs                                   # 93 files, none > 500 lines

@@ -1,22 +1,16 @@
 // =============================================================================
-// Outbound mail through Resend (free tier: 3,000 emails/month).
+// Outbound mail through Resend (free tier: 3,000 emails/month, 100/day).
 //
 // The Resend API key lives ONLY in the Worker (wrangler secret). The browser
 // never talks to Resend. The From address must be on a domain you verified
 // in Resend (see docs/SETUP.md).
+//
+// This adapter is one of several: `send/index.ts` picks it when the key is the
+// configured provider, so switching providers never touches the route.
 // =============================================================================
 
-import { HttpError } from './http';
-
-export interface OutboundMail {
-  from: string;
-  to: string[];
-  cc: string[];
-  bcc: string[];
-  subject: string;
-  text: string;
-  html: string;
-}
+import { HttpError } from '../http';
+import type { OutboundMail } from './types';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 

@@ -29,6 +29,17 @@
 | PWA | **Done** | Manifest `display_override`/shortcuts, offline app shell, fonts + images cached, `/api/*` never cached. |
 | Accessibility | **Done** | `prefers-reduced-motion`, visible focus, 44px+ targets, unread announced as text. |
 
+## Phase 2.8 — Provider-neutral sending
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| Send adapter | **Done** | `worker/src/send/` with `resend.ts` + `cloudflare.ts`; `MAIL_SEND_PROVIDER` selects, unset auto-detects. Route unchanged. |
+| Error contract | **Done** | Same `sending_not_configured` / `provider_rate_limited` / `send_failed` codes for every provider; provider codes are never echoed. |
+| Optional Cloudflare Email Sending | **Ready, off** | Binding documented and commented in `wrangler.toml`. Needs Workers Paid ($5/mo), so it is the owner's call; docs/SENDING.md has the steps. |
+| Visibility | **Done** | `/api/health` → `send.provider`, `configured.emailBinding`; send response includes `provider`. |
+| Bounces/complaints | **Open** | No webhook/queue consumer yet; provider-specific. |
+| Deploy | **Pending** | Local only. |
+
 ## Phase 2.7 — Startup: identity first (this branch)
 
 | Area | Status | Notes |

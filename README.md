@@ -8,7 +8,8 @@ your address comes from your username.
   Email handler.
 - **Storage**: **Cloudflare D1** (`mail` database, binding `DB`) — 100% native, zero Supabase.
   Message bodies are gzip-compressed, so a free 500 MB database holds roughly 250,000 emails.
-- **Outbound**: Resend, called only from the Worker.
+- **Outbound**: one pluggable provider (`worker/src/send/`) — Resend by default, Cloudflare
+  Email Sending optional. Called only from the Worker; see [docs/SENDING.md](docs/SENDING.md).
 
 Folders: **Inbox, Starred, Sent, Drafts, Trash**.
 
@@ -112,6 +113,8 @@ The Worker is named `mail` in the Cloudflare dashboard and `worker/wrangler.toml
 - [docs/MAIL.md](docs/MAIL.md): how sign-in, storage, retention, sending and inbound work.
 - [docs/STARTUP.md](docs/STARTUP.md): what the app waits for on boot, what it defers, and the
   measured local numbers.
+- [docs/SENDING.md](docs/SENDING.md): outbound providers, how to switch, and the DNS records
+  every option needs.
 - [HANDOVER.md](HANDOVER.md): current state, how to verify it, and what is left to deploy.
 - [AGENTS.md](AGENTS.md): rules for working on this repo.
 - [PLAN.md](PLAN.md): status and open decisions.
