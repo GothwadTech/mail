@@ -47,7 +47,7 @@ import {
   updateRetentionLimit,
 } from './retention';
 import { resolveSession, signinBaseUrl, deriveEmail, takeUpstreamCookies, type Session } from './session';
-import { sendViaResend } from './resend';
+import { configuredSendProvider, requireSendProvider, sendMail } from './send';
 
 async function requireSession(request: Request, config: Config): Promise<Session> {
   const session = await resolveSession(request, config);
@@ -123,10 +123,9 @@ async function handleSend(request: Request, env: Env, config: Config, session: S
   const text = mail.cleanBody(body.body);
   const draftId = body.draftId ? mail.parseId(String(body.draftId)) : null;
 
-  // Fail clearly when the provider key is not set yet (see docs/SETUP.md).
-  if (!env.RESEND_API_KEY) {
-    throw new HttpError(503, 'sending_not_configured', 'Sending is not set up yet. Ask the admin to add the Resend key.');
-  }
+  // Fail clearly when no provider is ready yet (see docs/SETUP.md). The
+  // provider is pluggable: Resend or Cloudflare Email Sending, chosen by config.
+  const provider = requireSendProvider(env);
 
   const db = await Db.from(env);
   const sentToday = await mail.countSentToday(db, session.username);
@@ -139,7 +138,7 @@ async function handleSend(request: Request, env: Env, config: Config, session: S
 
   const from = deriveEmail(session.username, config.appDomain);
   const html = mail.textToHtml(text);
-  const providerId = await sendViaResend(env.RESEND_API_KEY, {
+  const { providerId } = await sendMail(env, provider, {
     from,
     to,
     cc,
@@ -193,6 +192,8 @@ async function handleSend(request: Request, env: Env, config: Config, session: S
       sent: true,
       saved: savedId !== null,
       remainingToday: Math.max(config.dailySendLimit - sentToday - 1, 0),
+      // Which adapter delivered it. Useful when a deploy changes providers.
+      provider,
     },
     201
   );
@@ -233,6 +234,9 @@ async function route(request: Request, env: Env, config: Config): Promise<Respon
       environment: config.isProduction ? 'production' : 'development',
       database,
       configured: configStatus(env, config),
+      // Which outbound provider would send right now ("resend" | "cloudflare"),
+      // or null when nothing is configured. A name, never a credential.
+      send: { provider: configuredSendProvider(env) },
     });
   }
 

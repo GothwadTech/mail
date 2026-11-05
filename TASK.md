@@ -2,6 +2,49 @@
 
 Updated every session. Newest first.
 
+## 2026-11-05 — Sending becomes provider-neutral (Resend is a choice, not a dependency)
+
+**Owner request:** we use Resend to send mail — can we be independent of it? What is needed, and
+is code + Cloudflare enough or does something else have to be arranged?
+
+**Audit (facts, checked 2026-11):** a Worker cannot deliver mail itself — the runtime blocks
+outbound port 25 — so some relay is always required. Cloudflare's own answer, Email Sending
+(public beta since 2026-04), needs the **Workers Paid** plan for arbitrary recipients, includes
+3,000 emails/month, and is not free. A self-hosted server needs a static IP, PTR, open port 25,
+DKIM/SPF/DMARC and IP warm-up. So "no vendor at all" is infrastructure, not code; "not locked to
+Resend" is code — and that is what was built (owner picked this option).
+
+**What changed**
+
+- `worker/src/send/` (new): `types.ts` (one `OutboundMail`), `resend.ts` (moved from
+  `worker/src/resend.ts`), `cloudflare.ts` (the optional `send_email` binding) and `index.ts`,
+  which picks the provider and throws Mail's own 503 when none is ready.
+- `MAIL_SEND_PROVIDER` (`resend` | `cloudflare`, unset = auto-detect: Resend key, then binding).
+  A named-but-unconfigured provider is a hard 503 plus a logged `send_provider_unknown` — never a
+  silent fallback to another vendor.
+- Nothing else in the send path moved: same validation, same `DAILY_SEND_LIMIT` check **before**
+  the provider call, same gzip Sent copy (now with the provider id), same draft cleanup, same
+  retention, same 429/502 codes and messages.
+- `GET /api/health` now reports `send: { provider }` and `configured.emailBinding` (booleans and
+  a name only). The send response adds `provider` next to `id`.
+- `worker/wrangler.toml`: documented `MAIL_SEND_PROVIDER` plus a commented `[[send_email]]`
+  block, so switching later is uncomment + one var.
+- `docs/SENDING.md` (new): what sending actually requires, the three options with real 2026
+  terms, DNS checklist, switch steps, and the known bounce-handling gap.
+
+**Tests:** `worker/test/send-provider.test.ts` (7) — default Resend path unchanged, binding path
+pays the same `From`/to/cc/subject and stores its message id, explicit-but-missing provider →
+503 with nothing sent, auto-detect, 429/502 mapping (provider code never echoed), daily cap still
+checked first, health names the provider without leaking a key.
+
+**Verification:** `npm test` **188 pass** (worker 103, ui 19, d1 15, config 10, widget 9,
+startup 7, routing 10, assets 7, auth 5, language 3); `npm run lint` clean; `npm run build`
+clean; `npx wrangler deploy --dry-run` clean; every file under 500 lines.
+
+**Not done:** nothing is deployed; Cloudflare Email Sending stays disabled (it needs $5/month,
+which the owner's $0 rule forbids today). Bounces/complaints are still unhandled — the natural
+next step for deliverability, and provider-specific.
+
 ## 2026-10-24 — Startup: identity first, metadata never blocks the shell
 
 **Owner request:** the app sat on a full-screen "Loading your Gothwad Account" gate for too

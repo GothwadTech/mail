@@ -74,7 +74,12 @@ If you ever recreate the database, update `database_id` here **and** in `wrangle
 Only two secrets exist on Worker `mail`:
 
 1. **`ACCOUNTS_INTERNAL_TOKEN`** — must equal `MAIL_INTERNAL_TOKEN` on the `accounts` Worker.
-2. **`RESEND_API_KEY`** — from Resend (free plan: 3,000 emails/month).
+2. **`RESEND_API_KEY`** — from Resend (free plan: 3,000 emails/month, 100/day).
+
+Sending is provider-neutral: `MAIL_SEND_PROVIDER` (`resend` | `cloudflare`) picks the adapter in
+`worker/src/send/`, and `GET /api/health` reports the active one as `send.provider`. Cloudflare
+Email Sending needs the Workers Paid plan and is not enabled here. Every option, plus the SPF /
+DKIM / DMARC records any provider needs, is in [SENDING.md](SENDING.md).
 
 Set both from your machine (Wrangler prompts for each value; nothing is echoed):
 

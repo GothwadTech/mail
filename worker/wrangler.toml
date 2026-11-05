@@ -11,7 +11,14 @@
 # Secrets (never in this file; set in the dashboard as type "Secret", or from
 # your machine with `npm run worker:secrets`):
 #   ACCOUNTS_INTERNAL_TOKEN     same value as MAIL_INTERNAL_TOKEN in Accounts
-#   RESEND_API_KEY              re_...
+#   RESEND_API_KEY              re_... (one deployable outbound provider)
+#
+# Outbound sending is provider-neutral (worker/src/send/, docs/SENDING.md):
+#   MAIL_SEND_PROVIDER = "resend" | "cloudflare"; unset = auto-detect.
+# Cloudflare Email Sending is optional and needs the Workers Paid plan. To use
+# it, uncomment the binding below and set MAIL_SEND_PROVIDER = "cloudflare".
+# [[send_email]]
+# name = "EMAIL"
 #
 # See which secret NAMES the deployed Worker has (names only, never values):
 #   npm run worker:secrets:list
@@ -73,7 +80,9 @@ MAIL_URL = "https://mail.gothwadtech.com"
 ENVIRONMENT = "production"
 # Extra allowed origins, comma-separated (e.g. a Pages preview URL). Empty = none.
 ALLOWED_ORIGINS = ""
-# Per-user, per-UTC-day send cap. Resend free plan = 3,000 emails/month total.
+# Per-user, per-UTC-day send cap (Mail's own limit, independent of the provider).
 DAILY_SEND_LIMIT = "30"
+# Which outbound provider to use. Leave unset to auto-detect (Resend key first).
+# MAIL_SEND_PROVIDER = "resend"
 # Inbound messages above this size are rejected at SMTP time (10 MB).
 MAX_INBOUND_BYTES = "10485760"

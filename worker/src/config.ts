@@ -22,6 +22,14 @@
 // `wrangler secret put` or in the dashboard. Never put them in wrangler.toml.
 // =============================================================================
 
+/**
+ * Cloudflare's `send_email` binding (Email Sending). Optional: it only exists
+ * when the owner adds it to wrangler.toml, and Mail never requires it.
+ */
+export interface EmailBinding {
+  send(message: Record<string, unknown>): Promise<{ messageId?: string } | null | void>;
+}
+
 export interface Env {
   // Public config (wrangler.toml [vars])
   APP_DOMAIN?: string;
@@ -30,10 +38,17 @@ export interface Env {
   MAIL_URL?: string;
   // Cloudflare D1 binding (wrangler.toml [[d1_databases]]). Not a secret.
   DB?: D1Database;
+  // Optional Email Sending binding (wrangler.toml [[send_email]]).
+  EMAIL?: EmailBinding;
   ENVIRONMENT?: string; // "production" (default when unset) or "development"
   ALLOWED_ORIGINS?: string; // extra comma-separated origins for CORS / CSRF checks
   DAILY_SEND_LIMIT?: string;
   MAX_INBOUND_BYTES?: string;
+  /**
+   * Which outbound provider to use: "resend" or "cloudflare". Unset = auto
+   * (Resend key first, then the Cloudflare binding). See worker/src/send/.
+   */
+  MAIL_SEND_PROVIDER?: string;
 
   // Local-only (.dev.vars). Ignored unless ENVIRONMENT=development.
   DEV_AUTH_USERNAME?: string;
@@ -111,5 +126,7 @@ export function configStatus(env: Env, _config: Config): Record<string, boolean>
     d1Binding: Boolean(env.DB),
     accountsInternalToken: Boolean(env.ACCOUNTS_INTERNAL_TOKEN?.trim()),
     resendApiKey: Boolean(env.RESEND_API_KEY?.trim()),
+    // The optional Cloudflare Email Sending binding. Names only, never values.
+    emailBinding: Boolean(env.EMAIL),
   };
 }

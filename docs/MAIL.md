@@ -8,17 +8,18 @@ Browser ──► mail.gothwadtech.com
              └─ /api/*  ──► Mail Worker           worker/src/index.ts
                               ├─► Accounts: who is signed in?   AUTH_HUB_URL/api/auth/me
                               ├─► Cloudflare D1 (`mail` DB)     mail_settings + mail_messages
-                              └─► Resend (API key)              outbound mail
+                              └─► outbound provider             outbound mail
+                                  (Resend or Cloudflare, docs/SENDING.md)
 
 Internet mail ──► Email Routing (catch-all) ──► Mail Worker email()
                                                    ├─► Accounts username endpoint
                                                    └─► Cloudflare D1 (`mail` DB)
 ```
 
-- The **browser** never has a Resend key and never talks to D1. It only calls `/api/*` on the
-  same origin.
+- The **browser** never has a mail-provider key and never talks to D1. It only calls `/api/*`
+  on the same origin.
 - The **Mail Worker** is the only place that holds secrets. Only two exist:
-  `ACCOUNTS_INTERNAL_TOKEN` and `RESEND_API_KEY`.
+  `ACCOUNTS_INTERNAL_TOKEN` and the outbound provider key (`RESEND_API_KEY` today).
 - **Accounts** is the source of truth for who is signed in. Mail never stores passwords and
   never makes its own login. Mail has its own D1 database (`mail`) and never reads the
   Accounts database.
@@ -381,11 +382,14 @@ drives the same widget inside jsdom (the test installs the stand-in as
 
 1. Validate: recipients (max 25), subject, body (max 100,000 characters). Strip and check
    the addresses.
-2. If `RESEND_API_KEY` is missing, return **503**.
+2. If no outbound provider is configured, return **503 `sending_not_configured`**. The provider
+   is pluggable (`worker/src/send/`, chosen by `MAIL_SEND_PROVIDER`) — see
+   [SENDING.md](SENDING.md).
 3. Check the daily cap: sent rows today for this user, against `DAILY_SEND_LIMIT` (default
    30). Over the cap returns **429**.
-4. Send through Resend from `username@APP_DOMAIN`. If Resend rate-limits us, return
-   **429** with `provider_rate_limited`. If Resend is unreachable, return **502**.
+4. Send from `username@APP_DOMAIN` through the configured provider. A provider rate limit is
+   **429** `provider_rate_limited`; an unreachable or rejecting provider is **502**
+   `send_failed`.
 5. Insert a copy in `sent` (gzip body + `size_bytes`). If that insert fails, the response
    still says the mail was sent (`saved: false`) and the failure is logged.
 6. If a `draftId` was given, delete that draft.

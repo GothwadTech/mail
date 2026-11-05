@@ -48,6 +48,7 @@ test('health is public, reports D1 readiness, and calls no upstream', async () =
     d1Binding: true,
     accountsInternalToken: true,
     resendApiKey: true,
+    emailBinding: false,
   });
   assert.equal(h.seen.length, 0, 'health must not call upstreams');
 });
@@ -57,7 +58,13 @@ test('health with no D1 binding says bound:false and never leaks values', async 
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.deepEqual(body.database, { bound: false, ready: false, tables: 0 });
-  assert.deepEqual(body.configured, { d1Binding: false, accountsInternalToken: false, resendApiKey: false });
+  assert.deepEqual(body.configured, {
+    d1Binding: false,
+    accountsInternalToken: false,
+    resendApiKey: false,
+    emailBinding: false,
+  });
+  assert.equal(body.send.provider, null, 'no provider configured is reported as null');
   const text = JSON.stringify(body);
   assert.equal(text.toLowerCase().includes('supabase'), false, 'zero Supabase fields remain');
   assert.equal(text.includes('re_'), false, 'never prints a key');
